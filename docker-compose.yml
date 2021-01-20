@@ -1,0 +1,116 @@
+version: '3'
+
+networks:
+  network_55:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.55.0.0/16
+          gateway: 172.55.0.1 
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+    container_name: nginx55
+    ports:
+      - "55:80"
+    volumes:
+      - ./src:/var/www/html:delegated
+    depends_on:
+      - php
+      - mysql
+    networks:
+      network_55:
+        ipv4_address: 172.55.0.2
+
+  php:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    container_name: php55
+    volumes:
+      - ./src:/var/www/html:delegated
+    ports:
+      - "9005:9000"
+    networks:
+      network_55:
+        ipv4_address: 172.55.0.3
+        
+
+  mysql:
+    image: mysql:5.7.29
+    container_name: mysql55
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3355:3306"
+    environment:
+      MYSQL_DATABASE: request
+      MYSQL_USER: request_db_user
+      MYSQL_PASSWORD: 12345678
+      MYSQL_ROOT_PASSWORD: 12345678
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    networks:
+      network_55:
+        ipv4_address: 172.55.0.4
+
+  phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: phpmyadmin55
+        environment:
+            - PMA_ARBITRARY=1
+            - PMA_HOST=mysql
+        restart: unless-stopped
+        ports:
+           - 2055:80
+        volumes:
+           - /sessions
+        networks:
+          network_55:
+            ipv4_address: 172.55.0.5
+  
+  composer:
+    build:
+      context: .
+      dockerfile: composer.dockerfile
+    container_name: composer55
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - php
+    user: laravel
+    networks:
+        network_55:
+          ipv4_address: 172.55.0.6
+    entrypoint: ['composer']
+
+
+  artisan:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    container_name: artisan55
+    volumes:
+      - ./src:/var/www/html:delegated
+    depends_on:
+      - mysql
+    working_dir: /var/www/html
+    user: laravel
+    entrypoint: ['php', '/var/www/html/project/artisan']
+    networks:  
+      network_55:
+        ipv4_address: 172.55.0.7
+        
+        
+  npm:
+    image: node:13.7
+    container_name: npm55
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    entrypoint: ['npm']    
+        
